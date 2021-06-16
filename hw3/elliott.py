@@ -32,7 +32,7 @@ def PerformYoutubeSearch(searchTerm, maxResults):
         return searchResults['items']
             
 def PerformStatisticsRetrieval(videoList): 
-    # id to stats dict of the form 'id' : {title:'', like:'', ...}
+    # id to stats dict of the form 'id' : {title:'', likes:'', ...}
     videoIdDict = {vid['id']['videoId'] : {'title' : vid['snippet']['title']} for vid in videoList}
     videoIds = videoIdDict.keys()
 
@@ -75,7 +75,7 @@ def SortByLikeViewRatio(videoStatistics):
     sortedList = [(k , v) for k, v in sorted(videoStatsCopy.items(), key = lambda item: item[1]['viewToLikeRatio'], reverse=True)]
     return sortedList
 
-def OutputResults(sortedList):
+def OutputTop5(sortedList):
     print("Title | Like % | Views | Likes")
     count = 1
     for result in sortedList:
@@ -92,6 +92,50 @@ def OutputResults(sortedList):
         
         print("#" + str(count) + ": " + title + " | " + viewLikeRatio + " | " + views + " | " + likes)
         count += 1
+
+def OutputAll(sortedList):
+    print("Video Id | Views | Likes | Dislikes | Duration | Title")
+    count = 1
+    for result in sortedList:
+        # Pull out relevant stats from dict
+        vidId = result[0]
+        stats = result[1]
+        title = stats['title']
+        views = stats['viewCount']
+        likes = stats['likeCount']
+        dislikes = stats['dislikeCount']
+        duration = stats['videoDuration']
+        asList = [vidId, views, likes, dislikes, duration, title]
+        dataString ="#" + str(count) + ": " +  " | ".join(asList) + "\n"
+        
+        print(dataString)
+        count += 1
+
+def WriteToFile(sortedList):
+    header = "Video Id,Views,Likes,Dislikes,Duration,Title"
+    fileString = header + "\n"
+    for result in sortedList:
+        # Pull out relevant stats from dict
+        vidId = result[0]
+        stats = result[1]
+        title = stats['title']
+        views = stats['viewCount']
+        likes = stats['likeCount']
+        dislikes = stats['dislikeCount']
+        duration = stats['videoDuration']
+        asList = [vidId, views, likes, dislikes, duration, title]
+        fileString += ",".join(asList) + "\n"
+    fp = os.getcwd()
+    fileHandle = open(os.path.join(fp, "data.csv"), "w")
+    fileHandle.write(fileString)
+
+def OutputResults(sortedList):
+
+    OutputTop5(sortedList)
+    OutputAll(sortedList)
+    WriteToFile(sortedList)
+    
+
 # Main
 if __name__ == "__main__":
     # Get user input
