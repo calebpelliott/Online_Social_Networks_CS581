@@ -1,11 +1,9 @@
 import os
-
-class Node:
-    def __init__(self) -> None:
-        pass
+from datetime import datetime
 
 # Gets filename to pull data from
 def GetUserInput():
+    dataFp = ""
 
     # Loop until valid file path is entered
     while(True):
@@ -21,7 +19,7 @@ def GetUserInput():
         nodes = data.split("\n")
         # Removes any empty lines
         nodes[:] = [node for node in nodes if node != '']
-        return nodes
+        return [nodes, dataFp]
 
 
 def CreateTables(nodes):
@@ -55,8 +53,6 @@ def GetRelationBetweenNodes(allRelations, node1, node2):
 def FindTriads(allRelations):
     uniqueTriads = set()
     allNodes = allRelations.keys()
-    #Counter of triad types mapped as follows: TTT = 3, TTD = 1, TDD = -1, DDD = -3
-    edgeCombos = {3 : 0, 1 : 0, -1 : 0, -3 : 0}
     counter = 0
     for node in allNodes:
         counter += 1
@@ -71,21 +67,24 @@ def FindTriads(allRelations):
             for secondOrderNode in secondOrderNodes:
                 if(node in GetRelatedNodes(allRelations, secondOrderNode)):
                     newSet = frozenset({node, firstOrderNode, secondOrderNode})
-                    if not newSet in uniqueTriads:
-                        edgeType = GetRelationBetweenNodes(allRelations, node, firstOrderNode) + \
-                            GetRelationBetweenNodes(allRelations, node, secondOrderNode) + \
-                            GetRelationBetweenNodes(allRelations, firstOrderNode, secondOrderNode)
-                        edgeCombos[edgeType] = edgeCombos[edgeType] + 1
                     uniqueTriads.add(newSet)
-                    
-    
-    #for triad in uniqueTriads:
-    #    print(triad)
 
-    print("Total # triads: " + str(len(uniqueTriads)))
-    print(edgeCombos)
     return uniqueTriads
-        
+
+def GetTriadTypes(allRelations, triads):
+    #Counter of triad types mapped as follows: TTT = 3, TTD = 1, TDD = -1, DDD = -3
+    edgeCombos = {3 : 0, 1 : 0, -1 : 0, -3 : 0}
+
+    for triadSet in triads:
+        triad = list(triadSet)
+        edgeType = GetRelationBetweenNodes(allRelations, triad[0], triad[1]) + \
+            GetRelationBetweenNodes(allRelations, triad[0], triad[2]) + \
+            GetRelationBetweenNodes(allRelations, triad[1], triad[2])
+        edgeCombos[edgeType] = edgeCombos[edgeType] + 1
+
+    edgeTypes = {"TTT" : edgeCombos[3], "TTD" : edgeCombos[1], "TDD" : edgeCombos[-1], "DDD" : edgeCombos[-3]}
+    return edgeTypes
+
 def GetRelationData(nodes):
     numEdges = len(nodes)
     numPositive = 0
@@ -93,14 +92,64 @@ def GetRelationData(nodes):
     for node in nodes:
         if node.split(',')[2] == '1':
             numPositive += 1
-    print("Num edges: " + str(numEdges) + ". Num positive edges: " + str(numPositive))
     return [numEdges, numPositive]
 
+def PrintStats(filename, start, end, numEdges, numPositive, allTriads, triadTypes, expectedDist, actualDist):
+    print("Data from file: " + filename)
+    print("Number of triangles: " + str(len(allTriads)))
+    print("Trust edges: " + str(numPositive) + ". Probability: " + str(float(numPositive/numEdges) * 100) + "%")
+    print("Distrust edges: " + str(numEdges - numPositive) + ". Probability: " + str(float((numEdges - numPositive)/numEdges) * 100) + "%")
+    print("Edges used: " + str(numEdges))
+    print("Triangle Types:")
+    for type, count in triadTypes.items():
+        print(type + ": " + str(count))
+    print("Expected Distribution:")
+    for type, count in expectedDist.items():
+        print(type + ": " + count)
+    print("Actual Distribution:")
+    for type, count in actualDist.items():
+        print(type + ": " + count)
+    print("Start Time = " + start)
+    print("End Time = " + end)
+
+def CalculateDistribution(numEdges, numPositive, numTriads, actualTypes):
+    percentPositive = float(numPositive / numEdges)
+    percentNegative = float(1 - percentPositive)
+
+    expectedDist = {}
+    actualDist = {}
+
+    tttExpected = " percent: " + str(float(pow(percentPositive, 3)) * 100) + "%. number: " + str(float(pow(percentPositive, 3) * numTriads))
+    ttdExpected = " percent: " + str(float(pow(percentPositive, 2) * percentNegative) * 100 * 3) + "%. number: " + str(float(pow(percentPositive, 2) * percentNegative * numTriads))
+    tddExpected = " percent: " + str(float(pow(percentNegative, 2) * percentPositive) * 100 * 3) + "%. number: " + str(float(pow(percentNegative, 2) * percentPositive * numTriads))
+    dddExpected = " percent: " + str(float(pow(percentNegative, 3)) * 100) + "%. number: " + str(float(pow(percentNegative, 3) * numTriads))
+
+    expectedDist["TTT"] = tttExpected
+    expectedDist["TTD"] = ttdExpected
+    expectedDist["TDD"] = tddExpected
+    expectedDist["DDD"] = dddExpected
+
+    for type, count in actualTypes.items():
+        expected = " percent: " + str(float(count/numTriads) * 100) + "%. number: " + str(count)
+        actualDist[type] = expected
+
+    return [expectedDist, actualDist]
 # Main
 if __name__ == "__main__":
     # Get user input
-    nodes = GetUserInput()
+    nodes, filename = GetUserInput()
+
+    #Start timer after user input
+    start = datetime.now()
+    start = start.strftime("%H:%M:%S")
 
     numEdges, numPositive = GetRelationData(nodes)
     allRelations = CreateTables(nodes)
     allTriads = FindTriads(allRelations)
+    triadTypes = GetTriadTypes(allRelations, allTriads)
+    expectedDist, actualDist = CalculateDistribution(numEdges, numPositive, len(allTriads), triadTypes)
+
+    end = datetime.now()
+    end = end.strftime("%H:%M:%S")
+
+    PrintStats(filename, start, end, numEdges, numPositive, allTriads, triadTypes, expectedDist, actualDist)
