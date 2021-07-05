@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+#  Caleb Elliott
+#  CS 581 Online Social Networks
+#  Purpose of assignment is to provide experience with data retreival and
+#  analyzing data via a social network's API (youtube in this case)
+
+# USAGE: python3 elliott.py
+#        user will then be prompted to enter a search parameter and the max number of results
+
 from copy import deepcopy
 from googleapiclient.discovery import build      # use build function to create a service object
 import os
@@ -27,38 +35,64 @@ def GetUserInput():
 def PerformYoutubeSearch(searchTerm, maxResults):
     print("Performing search for: " + searchTerm + "\n" +
         "Max Results: " + str(maxResults))
+        
+    # Build search service and search using the search term
     with build('youtube', 'v3') as youtube:
         searchResults = youtube.search().list(part="id,snippet", maxResults=maxResults, type="video", q=searchTerm).execute()
-        return searchResults['items']
-            
+        results = []
+        while len(results) < maxResults:
+            results += searchResults['items']
+            #Only continue searching if there is another page
+            if not 'nextPageToken' in searchResults:
+                break
+            nextPage = searchResults['nextPageToken']
+            searchResults = youtube.search().list(part="id,snippet", maxResults=maxResults, type="video", pageToken=nextPage).execute()
+        return results[:maxResults]
+
+# Taken from https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
+def divide_chunks(l, n):
+    # looping till length l
+    for i in range(0, len(l), n): 
+        yield l[i:i + n]
+
 def PerformStatisticsRetrieval(videoList): 
     # id to stats dict of the form 'id' : {title:'', likes:'', ...}
     videoIdDict = {vid['id']['videoId'] : {'title' : vid['snippet']['title']} for vid in videoList}
-    videoIds = videoIdDict.keys()
+    videoIds = list(videoIdDict.keys())
 
-    # Comma delimited ids to be used in query
-    commaDelimIds = ",".join(videoIds)
+    # Max number of ids that can be queried at once
+    MAX_YOUTUBE_API = 50
+    chunkedIds = list(divide_chunks(videoIds, MAX_YOUTUBE_API))
 
-    with build('youtube', 'v3') as youtube:
-        videoStatisticsResults = youtube.videos().list(part="statistics,contentDetails", id=commaDelimIds).execute()
-        for stat in videoStatisticsResults['items']:
-            vidId = stat['id']
-            vidDutation = stat['contentDetails']['duration']
-            vidViewCount = stat['statistics']['viewCount']
-            vidLikeCount = '0'
-            vidDislikeCount = '0'
+    for idChuck in chunkedIds:
+        # Comma delimited ids to be used in query
+        commaDelimIds = ",".join(idChuck)
 
-            if 'likeCount' in stat['statistics']:
-                vidLikeCount = stat['statistics']['likeCount']
-            if 'dislikeCount' in stat['statistics']:
-                vidDislikeCount = stat['statistics']['dislikeCount']
+        # Build videos service and query using video ids
+        with build('youtube', 'v3') as youtube:
+            videoStatisticsResults = youtube.videos().list(part="statistics,contentDetails", id=commaDelimIds).execute()
+            for stat in videoStatisticsResults['items']:
+                vidId = stat['id']
+                vidDuration = '0'
+                vidViewCount = '0'
+                vidLikeCount = '0'
+                vidDislikeCount = '0'
 
-            videoIdDict[vidId]['videoDuration'] = vidDutation
-            videoIdDict[vidId]['viewCount'] = vidViewCount
-            videoIdDict[vidId]['likeCount'] = vidLikeCount
-            videoIdDict[vidId]['dislikeCount'] = vidDislikeCount
+                if 'duration' in stat['contentDetails']:
+                    vidDuration = stat['contentDetails']['duration']
+                if 'viewCount' in stat['statistics']:
+                    vidViewCount = stat['statistics']['viewCount']
+                if 'likeCount' in stat['statistics']:
+                    vidLikeCount = stat['statistics']['likeCount']
+                if 'dislikeCount' in stat['statistics']:
+                    vidDislikeCount = stat['statistics']['dislikeCount']
 
-        return videoIdDict
+                videoIdDict[vidId]['videoDuration'] = vidDuration
+                videoIdDict[vidId]['viewCount'] = vidViewCount
+                videoIdDict[vidId]['likeCount'] = vidLikeCount
+                videoIdDict[vidId]['dislikeCount'] = vidDislikeCount
+
+    return videoIdDict
 
 def SortByLikeViewRatio(videoStatistics):
     videoStatsCopy = deepcopy(videoStatistics)
@@ -71,7 +105,8 @@ def SortByLikeViewRatio(videoStatistics):
         if views != 0:
             ratio = likes / views
         videoStatsCopy[videoKey]['viewToLikeRatio'] = ratio
-    # Creates a sorted list based on view to like ratio (descending)
+    # Creates a sorted list based on view to like ratio (descending).
+    # this single line is a modified line of code found on stackoverflow
     sortedList = [(k , v) for k, v in sorted(videoStatsCopy.items(), key = lambda item: item[1]['viewToLikeRatio'], reverse=True)]
     return sortedList
 
