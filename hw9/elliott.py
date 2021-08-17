@@ -1,6 +1,7 @@
 import os
 import matplotlib.pyplot as plt
 import collections
+import numpy as np
 
 DATA_FILE = "Pew_Survey.csv"
 figureCount = 0
@@ -220,6 +221,128 @@ def GenerateMostRefused(headers, data):
     print("---Refused response---")
     print(question)
     print(occurences)
+
+def GenerateSex(headers, data):
+    sexPosition = headers.index("sex")
+    labels = ["Male", "Female"]
+    groups = [0] * len(labels)
+
+    for datum in data:
+        sex = datum[sexPosition]
+        groups[sex - 1] = groups[sex - 1] + 1
+
+    MakePieChart("Sex", labels, groups, "./basicSex")
+    print("---Sex---")
+    print(labels)
+    print(groups)
+
+def GenerateRegion(headers, data):
+    position = headers.index("cregion")
+    labels = ["Northeast", "Midwest", "South", "West"]
+    groups = [0] * len(labels)
+
+    for datum in data:
+        value = datum[position]
+        groups[value - 1] = groups[value - 1] + 1
+
+    MakePieChart("Region", labels, groups, "./region")
+    print("---Region---")
+    print(labels)
+    print(groups)
+
+def GenerateDeviceUsage(headers, data):
+    position = headers.index("device1b")
+    position2 = headers.index("device1c")
+    position3 = headers.index("device1d")
+    labels = ["Tablet", "Desktop/Laptop", "Game Console"]
+    groups = [0] * len(labels)
+
+    for datum in data:
+        count = 0
+        for pos in [position, position2, position3]:
+            if datum[pos] == 1:
+                groups[count] += 1
+            count += 1
+
+    MakePieChart("Devices", labels, groups, "./devices")
+    print("---Devices---")
+    print(labels)
+    print(groups)
+
+def GetResponsesByAge(headers, data, lb, ub):
+    position = headers.index("age")
+    group = []
+    for datum in data:
+        if lb <= datum[position] <= ub:
+            group.append(datum)
+    return group
+
+def GenerateSocialUsageByAgeGroup(headers, data):
+    ageGroups = []
+    ageGroups.append(GetResponsesByAge(headers, data, 18, 28))
+    ageGroups.append(GetResponsesByAge(headers, data, 29, 38))
+    ageGroups.append(GetResponsesByAge(headers, data, 39, 48))
+    ageGroups.append(GetResponsesByAge(headers, data, 49, 58))
+    ageGroups.append(GetResponsesByAge(headers, data, 59, 68))
+    ageGroups.append(GetResponsesByAge(headers, data, 69, 78))
+    ageGroups.append(GetResponsesByAge(headers, data, 79, 88))
+    ageGroups.append(GetResponsesByAge(headers, data, 89, 96))
+    
+    positions = [headers.index("sns2a"), headers.index("sns2b"), headers.index("sns2c"), headers.index("sns2d"), headers.index("sns2e")]
+    
+    #Represents list of platforms and the number of occurences 
+    smByAgeGroup = []
+    for i in range(len(positions)):
+        smByAgeGroup.append([0] * len(ageGroups))
+    ageGroup = 0
+    for group in ageGroups:
+        for response in group:
+            platform = 0
+            for position in positions:
+                if response[position] == 1 or response[position] == 2 or response[position] == 3:
+                    smByAgeGroup[platform][ageGroup] += 1
+                platform += 1
+        ageGroup += 1
+
+    labels = ["Twitter", "Instagram", "Facebook", "Snapchat", "Youtube"]
+    
+    global figureCount
+    plt.figure(figureCount)
+    figureCount += 1
+
+    x = np.arange(len(labels))
+    width = .35
+    #fig, ax = plt.subplots()
+    #rects1 = ax.bar(x - width/2, smByAgeGroup[0], width, label="18-28")
+    
+    plt.bar(x-.2, smByAgeGroup[0], width)
+    plt.set_ylabel("Occurencens")
+    plt.set_title("Platform use by age")
+    plt.set_xticks(x)
+    plt.set_xtickslabels(labels)
+    plt.legend()
+
+    plt.savefig(fname="./platformByAge")
+
+def GenerateSocialMediaUsage(headers, data):
+    positions = [headers.index("web1a"),headers.index("web1b"),headers.index("web1c"),
+        headers.index("web1d"),headers.index("web1e"),headers.index("web1f"),
+        headers.index("web1g"),headers.index("web1h"),headers.index("web1i")]
+    labels = ["Twitter", "Instagram", "Facebook", "Snapchat", "YouTube", "WhatsApp", "Pinterest", "LinkedIn", "Reddit"]
+    groups = [0] * len(labels)
+
+    for datum in data:
+        count = 0
+        for pos in positions:
+            if datum[pos] == 1:
+                groups[count] += 1
+            count += 1
+
+    MakePieChart("Social Media usage", labels, groups, "./smUsage")
+    print("---Social Media usage---")
+    print(labels)
+    print(groups)
+
 def GenerateBasicDemographics(headers, data):
     GenerateAges(headers, data)
     GenerateIncomes(headers, data)
@@ -228,8 +351,12 @@ def GenerateBasicDemographics(headers, data):
     GeneratePoliticalLean(headers, data)
     GenerateNoResponses(headers, data)
     GenerateMostRefused(headers, data)
-    #GenerateSex
-    #GenerateRegion
+    GenerateSex(headers, data)
+    GenerateRegion(headers, data)
+    GenerateDeviceUsage(headers, data)
+    GenerateSocialMediaUsage(headers, data)
+    GenerateSocialUsageByAgeGroup(headers, data)
+    #GenerateSocialUsageByDevice(headers, data)
 
 # Main
 if __name__ == "__main__":
