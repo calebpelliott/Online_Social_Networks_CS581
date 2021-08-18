@@ -84,7 +84,7 @@ def GenerateAgeBasedIncomes(headers, data):
     incomePosition = headers.index("inc")
     agePosition = headers.index("age")
 
-    #Dictionary of form {age: {incomeSum, occurences}}
+    #Dictionary of form {age: {incomeSum, occurrences}}
     ageDict = {}
     for datum in data:
         income = datum[incomePosition]
@@ -93,14 +93,14 @@ def GenerateAgeBasedIncomes(headers, data):
             continue
 
         if age not in ageDict.keys():
-            ageDict[age] = {"income" : income, "occurences" : 1}
+            ageDict[age] = {"income" : income, "occurrences" : 1}
         else:
             ageDict[age]["income"] = ageDict[age]["income"] + income
-            ageDict[age]["occurences"] = ageDict[age]["occurences"] + 1
+            ageDict[age]["occurrences"] = ageDict[age]["occurrences"] + 1
     
     orderedAgeDict = collections.OrderedDict(sorted(ageDict.items()))
     ages = [k for k in orderedAgeDict]
-    averageIncome = [orderedAgeDict[k]["income"] / orderedAgeDict[k]["occurences"] for k in orderedAgeDict]
+    averageIncome = [orderedAgeDict[k]["income"] / orderedAgeDict[k]["occurrences"] for k in orderedAgeDict]
     
     global figureCount
     plt.figure(figureCount)
@@ -170,23 +170,23 @@ def GenerateNoResponses(headers, data):
                 noneDict[headers[pos]] = noneDict[headers[pos]] + 1
             pos += 1
     question = []
-    occurences = []
+    occurrences = []
     for k,v in noneDict.items():
         if v != 0:
             question.append(k)
-            occurences.append(v)
+            occurrences.append(v)
 
     global figureCount
     plt.figure(figureCount)
     figureCount += 1
-    plt.bar(question, occurences)
-    plt.ylabel("Occurences")
+    plt.bar(question, occurrences)
+    plt.ylabel("Occurrences")
     plt.xlabel("Survey question")
     plt.title("Most unanswered questions")
     plt.savefig("./noAnswer")
     print("---No response---")
     print(question)
-    print(occurences)
+    print(occurrences)
 
 def GenerateMostRefused(headers, data):
     refusedDict = {}
@@ -204,23 +204,23 @@ def GenerateMostRefused(headers, data):
                 refusedDict[headers[pos]] = refusedDict[headers[pos]] + 1
             pos += 1
     question = []
-    occurences = []
+    occurrences = []
     for k,v in refusedDict.items():
         if v != 0:
             question.append(k)
-            occurences.append(v)
+            occurrences.append(v)
 
     global figureCount
     plt.figure(figureCount)
     figureCount += 1
-    plt.bar(question, occurences)
-    plt.ylabel("Occurences")
+    plt.bar(question, occurrences)
+    plt.ylabel("Occurrences")
     plt.xlabel("Survey question")
     plt.title("Refused questions")
     plt.savefig("./refusedAnswer")
     print("---Refused response---")
     print(question)
-    print(occurences)
+    print(occurrences)
 
 def GenerateSex(headers, data):
     sexPosition = headers.index("sex")
@@ -290,7 +290,7 @@ def GenerateSocialUsageByAgeGroup(headers, data):
     
     positions = [headers.index("sns2a"), headers.index("sns2b"), headers.index("sns2c"), headers.index("sns2d"), headers.index("sns2e")]
     
-    #Represents list of platforms and the number of occurences 
+    #Represents list of platforms and the number of occurrences 
     smByAgeGroup = []
     for i in range(len(positions)):
         smByAgeGroup.append([0] * len(ageGroups))
@@ -304,22 +304,29 @@ def GenerateSocialUsageByAgeGroup(headers, data):
                 platform += 1
         ageGroup += 1
 
-    labels = ["Twitter", "Instagram", "Facebook", "Snapchat", "Youtube"]
-    
+    labels = ["18-28", "29-38", "39-48", "49-58", "59-68", "69-78", "79-88", "89-96"]
+    xlabels = ["Twitter", "Instagram", "Facebook", "Snapchat", "Youtube"]
     global figureCount
     plt.figure(figureCount)
     figureCount += 1
 
-    x = np.arange(len(labels))
-    width = .35
-    #fig, ax = plt.subplots()
-    #rects1 = ax.bar(x - width/2, smByAgeGroup[0], width, label="18-28")
-    
-    plt.bar(x-.2, smByAgeGroup[0], width)
-    plt.set_ylabel("Occurencens")
-    plt.set_title("Platform use by age")
-    plt.set_xticks(x)
-    plt.set_xtickslabels(labels)
+    x = np.arange(len(xlabels))
+    width = .1
+    bars = []
+    for i in range(len(ageGroups)):
+        bars.append([smByAgeGroup[0][i], smByAgeGroup[1][i], smByAgeGroup[2][i], smByAgeGroup[3][i], smByAgeGroup[4][i]])
+    plt.bar(x-.4, bars[0], width, label=labels[0])
+    plt.bar(x-.3, bars[1], width, label=labels[1])
+    plt.bar(x-.2, bars[2], width, label=labels[2])
+    plt.bar(x-.1, bars[3], width, label=labels[3])
+    plt.bar(x-.0, bars[4], width, label=labels[4])
+    plt.bar(x+.1, bars[5], width, label=labels[5])
+    plt.bar(x+.2, bars[6], width, label=labels[6])
+    plt.bar(x+.3, bars[7], width, label=labels[7])
+    plt.ylabel("Occurrencens")
+    plt.title("Platform use by age (at least a few times per week)")
+    plt.xticks(x)
+    plt.xlabel(xlabels)
     plt.legend()
 
     plt.savefig(fname="./platformByAge")
