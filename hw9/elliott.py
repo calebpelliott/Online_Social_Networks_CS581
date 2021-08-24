@@ -1,19 +1,31 @@
+#!/usr/bin/env python3
+
+#  Caleb Elliott
+#  CS 581 Online Social Networks
+#  Purpose of assignment is to analyze data having to do with
+#  social media usage.
+
+# USAGE: python3 elliott.py
+
 import os
 import matplotlib.pyplot as plt
 import collections
 import numpy as np
 
+#File to read data from
 DATA_FILE = "Pew_Survey.csv"
 figureCount = 0
 
+#Make pie charts given title, names, values, and filename
 def MakePieChart(title, names, values, filename):
     global figureCount
     plt.figure(figureCount)
     figureCount += 1
-    plt.pie(values, labels=names)
+    plt.pie(values, labels=names, autopct='%1.1f%%')
     plt.title(title)
     plt.savefig(fname=filename)
 
+#Reads in data from file
 def ReadData():
     fullPath = os.path.join(os.path.dirname(os.path.realpath(__file__)), DATA_FILE)
     with open(fullPath) as fh:
@@ -22,6 +34,7 @@ def ReadData():
         columnData = [list(map(lambda x: int(x) if x.isnumeric() else None, data.split(','))) for data in fileData.split("\n")[1:]]
         return [columnHeaders, columnData]
 
+#Generates pie chart of ages
 def GenerateAges(headers, data):
     agePosition = headers.index("age")
     labels = ["18-38", "39-58", "59-78", "79-96", ">96", "Don't know", "Refused"]
@@ -58,6 +71,7 @@ def GenerateAges(headers, data):
     print(labels)
     print([group18, group39, group59, group79, group97, group98, group99])
 
+#Generates pie chart of incomes
 def GenerateIncomes(headers, data):
     incomePosition = headers.index("inc")
     labels = ["<10k", "10-20k", "20-30k", "30-40k", "40-50k", "50-75k", "75-100k", "100-150k", ">150k", "Don't know", "Refuse"]
@@ -80,6 +94,7 @@ def GenerateIncomes(headers, data):
     print(labels)
     print(groups)
 
+#Generates line graph of age to income
 def GenerateAgeBasedIncomes(headers, data):
     incomePosition = headers.index("inc")
     agePosition = headers.index("age")
@@ -114,6 +129,7 @@ def GenerateAgeBasedIncomes(headers, data):
     print(ages)
     print(averageIncome)
 
+#Creates pie chart of political affiliation
 def GeneratePolitical(headers, data):
     politicalPosition = headers.index("party")
     labels = ["Republican", "Democrat", "Independent", "No preference", "Other party", "Don't know", "Refused"]
@@ -136,6 +152,7 @@ def GeneratePolitical(headers, data):
     print(labels)
     print(groups)
 
+#Generates political leaning of non-Republicans/Democrats
 def GeneratePoliticalLean(headers, data):
     politicalPosition = headers.index("partyln")
     labels = ["Republican", "Democrat", "Don't know", "Refused"]
@@ -157,37 +174,8 @@ def GeneratePoliticalLean(headers, data):
     print("---Political party lean---")
     print(labels)
     print(groups)
-# Analyzes which questions weren't answered the most
-def GenerateNoResponses(headers, data):
-    noneDict = {}
-    for header in headers[1:]:
-        noneDict[header] = 0
 
-    for datum in data:
-        pos = 0
-        for item in datum:
-            if item == None:
-                noneDict[headers[pos]] = noneDict[headers[pos]] + 1
-            pos += 1
-    question = []
-    occurrences = []
-    for k,v in noneDict.items():
-        if v != 0:
-            question.append(k)
-            occurrences.append(v)
-
-    global figureCount
-    plt.figure(figureCount)
-    figureCount += 1
-    plt.bar(question, occurrences)
-    plt.ylabel("Occurrences")
-    plt.xlabel("Survey question")
-    plt.title("Most unanswered questions")
-    plt.savefig("./noAnswer")
-    print("---No response---")
-    print(question)
-    print(occurrences)
-
+#Generates bar graph of most refused questions
 def GenerateMostRefused(headers, data):
     refusedDict = {}
     for header in headers[1:]:
@@ -222,6 +210,7 @@ def GenerateMostRefused(headers, data):
     print(question)
     print(occurrences)
 
+#Generates pie chart of sex
 def GenerateSex(headers, data):
     sexPosition = headers.index("sex")
     labels = ["Male", "Female"]
@@ -236,6 +225,7 @@ def GenerateSex(headers, data):
     print(labels)
     print(groups)
 
+#Generates pie chart of region
 def GenerateRegion(headers, data):
     position = headers.index("cregion")
     labels = ["Northeast", "Midwest", "South", "West"]
@@ -250,6 +240,7 @@ def GenerateRegion(headers, data):
     print(labels)
     print(groups)
 
+#Generates pie chart of device usage
 def GenerateDeviceUsage(headers, data):
     position = headers.index("device1b")
     position2 = headers.index("device1c")
@@ -269,6 +260,7 @@ def GenerateDeviceUsage(headers, data):
     print(labels)
     print(groups)
 
+#Helper function to get users base off age
 def GetResponsesByAge(headers, data, lb, ub):
     position = headers.index("age")
     group = []
@@ -277,6 +269,7 @@ def GetResponsesByAge(headers, data, lb, ub):
             group.append(datum)
     return group
 
+#Generates bar graph of each social media platform analyzing the ages that use them
 def GenerateSocialUsageByAgeGroup(headers, data):
     ageGroups = []
     ageGroups.append(GetResponsesByAge(headers, data, 18, 28))
@@ -331,6 +324,7 @@ def GenerateSocialUsageByAgeGroup(headers, data):
 
     plt.savefig(fname="./platformByAge")
 
+#Creates pie chart of social media usage
 def GenerateSocialMediaUsage(headers, data):
     positions = [headers.index("web1a"),headers.index("web1b"),headers.index("web1c"),
         headers.index("web1d"),headers.index("web1e"),headers.index("web1f"),
@@ -350,23 +344,21 @@ def GenerateSocialMediaUsage(headers, data):
     print(labels)
     print(groups)
 
-def GenerateBasicDemographics(headers, data):
+#Generates all charts
+def GenerateData(headers, data):
     GenerateAges(headers, data)
     GenerateIncomes(headers, data)
     GenerateAgeBasedIncomes(headers, data)
     GeneratePolitical(headers, data)
     GeneratePoliticalLean(headers, data)
-    GenerateNoResponses(headers, data)
     GenerateMostRefused(headers, data)
     GenerateSex(headers, data)
     GenerateRegion(headers, data)
     GenerateDeviceUsage(headers, data)
     GenerateSocialMediaUsage(headers, data)
     GenerateSocialUsageByAgeGroup(headers, data)
-    #GenerateSocialUsageByDevice(headers, data)
 
 # Main
 if __name__ == "__main__":
     headers, data = ReadData()
-    GenerateBasicDemographics(headers, data)
-    #GenerateMostUnansweredQuestions
+    GenerateData(headers, data)

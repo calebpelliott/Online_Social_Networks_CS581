@@ -13,6 +13,6 @@ plt.pie(OSN_numbers, labels=OSN_names)
 plt.title('CS581 Social Media Use')
 
 plt.show()
-plt.savefig(fname="./test,png")
+plt.savefig(fname="./test1.png")
 
 x=3
