@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+
+#  Caleb Elliott
+#  CS 581 Online Social Networks
+#  Purpose of assignment is to read and analyze data that represents a social graph
+
+# USAGE: python3 elliott.py
+#        user will then be prompted to enter a filepath, relative to the location of this script,
+#        of the location of the data to be analyzed 
+
 import os
 from datetime import datetime
 
@@ -22,6 +32,13 @@ def GetUserInput():
         return [nodes, dataFp]
 
 
+#Given a list of nodes, creates a table of the form:
+
+#           nodes pointed to by node            nodes that point to node
+# { node : ({node1 : trust, node2 : trust, ...},{node1 : trust, node2 : trust, ...}),
+#   node2: (...),
+#   ...
+# }
 def CreateTables(nodes):
     allRelationsTable = {}
 
@@ -36,13 +53,14 @@ def CreateTables(nodes):
 
     return allRelationsTable
 
+#Returns the set of nodes the given node points at and is pointed at by
 def GetRelatedNodes(allRelations, node):
     return set(list(allRelations[node][0].keys()) + list(allRelations[node][1].keys()))
 
-
+#Attempts to find relation between to nodes
 def GetRelationBetweenNodes(allRelations, node1, node2):
     #Check if node2 is pointed to by node1
-    if node2 in allRelations[node1][0].keys():
+    if node2 in allRelations[node1][0].keys():        
         return allRelations[node1][0][node2]
     #Check if node2 points to node1
     elif node2 in allRelations[node1][1].keys():
@@ -50,27 +68,37 @@ def GetRelationBetweenNodes(allRelations, node1, node2):
     else:
         raise ValueError("No relation between gives nodes")
 
+#Finds triads given a table of nodes and their relations
 def FindTriads(allRelations):
     uniqueTriads = set()
     allNodes = allRelations.keys()
-    counter = 0
     for node in allNodes:
-        counter += 1
-        if counter % 100 == 0:
-            print(str(float(counter/len(allNodes)) * 100) + "% complete")
         # first order nodes are all nodes that point to node or are pointed at by node 
         firstOrderNodes = GetRelatedNodes(allRelations, node)
 
         for firstOrderNode in firstOrderNodes:
+            #Get relations of FON and find the common nodes between FON and original node, this forms a triad
             secondOrderNodes = GetRelatedNodes(allRelations, firstOrderNode)
+            commonNodes = firstOrderNodes.intersection(secondOrderNodes)
 
-            for secondOrderNode in secondOrderNodes:
-                if(node in GetRelatedNodes(allRelations, secondOrderNode)):
-                    newSet = frozenset({node, firstOrderNode, secondOrderNode})
-                    uniqueTriads.add(newSet)
+            #By comparing set intersection instead of iterating through second order nodes, run-time
+            # for n ~= 400,000 decreased from around 22 minutes to 30 seconds. Before, the time complexity was
+            # O(n + m) where n is the number of nodes related to the root node and m is the number of nodes related
+            # to the nth node. By compering sets, the time complexity gets reduced to O(n + min(n,m)).
+            
+            #Set intersection vs. iteration
+            for thirdNode in commonNodes:
+                newSet = frozenset({node, firstOrderNode, thirdNode})
+                uniqueTriads.add(newSet)
+            
+            #for secondOrderNode in secondOrderNodes:
+            #    if(node in GetRelatedNodes(allRelations, secondOrderNode)):
+            #        newSet = frozenset({node, firstOrderNode, secondOrderNode})
+            #        uniqueTriads.add(newSet)
 
     return uniqueTriads
 
+#Finds the relationship between triads and counts the number of each occurence
 def GetTriadTypes(allRelations, triads):
     #Counter of triad types mapped as follows: TTT = 3, TTD = 1, TDD = -1, DDD = -3
     edgeCombos = {3 : 0, 1 : 0, -1 : 0, -3 : 0}
@@ -85,6 +113,7 @@ def GetTriadTypes(allRelations, triads):
     edgeTypes = {"TTT" : edgeCombos[3], "TTD" : edgeCombos[1], "TDD" : edgeCombos[-1], "DDD" : edgeCombos[-3]}
     return edgeTypes
 
+#Finds number of edges and number of trusted edges
 def GetRelationData(nodes):
     numEdges = len(nodes)
     numPositive = 0
@@ -94,6 +123,7 @@ def GetRelationData(nodes):
             numPositive += 1
     return [numEdges, numPositive]
 
+#Prints various stats to console
 def PrintStats(filename, start, end, numEdges, numPositive, allTriads, triadTypes, expectedDist, actualDist):
     print("Data from file: " + filename)
     print("Number of triangles: " + str(len(allTriads)))
@@ -112,6 +142,7 @@ def PrintStats(filename, start, end, numEdges, numPositive, allTriads, triadType
     print("Start Time = " + start)
     print("End Time = " + end)
 
+#Finds the actual and expected triad relationships 
 def CalculateDistribution(numEdges, numPositive, numTriads, actualTypes):
     percentPositive = float(numPositive / numEdges)
     percentNegative = float(1 - percentPositive)
@@ -134,6 +165,7 @@ def CalculateDistribution(numEdges, numPositive, numTriads, actualTypes):
         actualDist[type] = expected
 
     return [expectedDist, actualDist]
+
 # Main
 if __name__ == "__main__":
     # Get user input
@@ -143,6 +175,7 @@ if __name__ == "__main__":
     start = datetime.now()
     start = start.strftime("%H:%M:%S")
 
+    #Collect data
     numEdges, numPositive = GetRelationData(nodes)
     allRelations = CreateTables(nodes)
     allTriads = FindTriads(allRelations)
@@ -152,4 +185,5 @@ if __name__ == "__main__":
     end = datetime.now()
     end = end.strftime("%H:%M:%S")
 
+    #Output stats from data
     PrintStats(filename, start, end, numEdges, numPositive, allTriads, triadTypes, expectedDist, actualDist)
